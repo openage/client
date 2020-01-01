@@ -1,0 +1,13 @@
+const crud = require('../helpers/crud')
+
+exports.billingentities = crud('billing', 'billingentities')
+exports.clusters = crud('billing', 'clusters')
+exports.currencies = crud('billing', 'currencies')
+exports.invoices = crud('billing', 'invoices')
+exports.lineitemtypes = crud('billing', 'lineitemtypes')
+exports.organizations = crud('billing', 'organizations')
+exports.plans = crud('billing', 'plans')
+exports.subscriptions = crud('billing', 'subscriptions')
+exports.taxes = crud('billing', 'taxes')
+exports.tenants = crud('billing', 'tenants')
+exports.users = crud('billing', 'users')
