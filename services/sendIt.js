@@ -1,0 +1,10 @@
+const crud = require('../helpers/crud')
+
+exports.channels = crud('sendIt', 'channels')
+exports.conversations = crud('sendIt', 'conversations')
+exports.messages = crud('sendIt', 'messages')
+exports.organizations = crud('sendIt', 'organizations')
+exports.providers = crud('sendIt', 'providers')
+exports.templates = crud('sendIt', 'templates')
+exports.tenants = crud('sendIt', 'tenants')
+exports.users = crud('sendIt', 'users')
