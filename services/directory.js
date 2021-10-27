@@ -7,10 +7,13 @@ exports.users = crud('directory', 'users')
 exports.auth = {
     signIn: async (email, code, mobile, password, context) => {
         return this.users.post({
-            email: email,
-            code: code,
-            mobile: mobile,
-            password: password
+            purpose: 'login',
+            user: {
+                email: email,
+                code: code,
+                mobile: mobile,
+                password: password
+            }
         }, {
             path: 'signIn'
         }, context)

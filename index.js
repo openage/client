@@ -1,2 +1,9 @@
 exports.directory = require('./services/directory')
-
+exports.gateway = require('./services/gateway')
+exports.billing = require('./services/billing')
+exports.drive = require('./services/drive')
+exports.insight = require('./services/insight')
+exports.mo = require('./services/mo')
+exports.sales = require('./services/sales')
+exports.sendIt = require('./services/sendIt')
+exports.connect = require('./services/connect')
