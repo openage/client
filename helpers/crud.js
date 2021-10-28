@@ -3,9 +3,8 @@ const headerHelper = require('./header-helper')
 const client = new (require('node-rest-client-promise')).Client()
 const buildUrl = require('build-url')
 
-module.exports = (service, collection) => {
-    const config = require('config').get('providers')[service]
-
+module.exports = (serviceCode, collection) => {
+    const config = require('config').get('providers')[serviceCode] || {}
     const parseResponse = (res, context) => {
         if (!res.data.isSuccess) {
             context.logger.error(res.data.message || res.data.error)
@@ -21,10 +20,24 @@ module.exports = (service, collection) => {
         }
     }
 
+    const getRootUrl = (context) => {
+        let rootUrl = config.url
+        if (context.tenant && context.tenant.services && context.tenant.services.length > 0) {
+            const service = context.tenant.services.find(s => s.code === serviceCode)
+            if (service) {
+                rootUrl = service.url
+            }
+        }
+        if (!rootUrl) {
+            throw new Error(`Could not find root URL for service: ${serviceCode}`)
+        }
+        return rootUrl
+    }
+
     const createUrl = (options, context) => {
         options = options || {}
-
-        let url = buildUrl(config.url, {
+        const rootUrl = getRootUrl(context)
+        let url = buildUrl(rootUrl, {
             path: options.path ? `${collection}/${options.path}` : collection,
             queryParams: options.query
         })
@@ -37,7 +50,7 @@ module.exports = (service, collection) => {
     const createResourceUrl = (id, options, context) => {
         options = options || {}
 
-        let url = buildUrl(config.url, {
+        let url = buildUrl(getRootUrl(context), {
             path: `${collection}/${id}`,
             queryParams: options.query
         })
@@ -51,16 +64,18 @@ module.exports = (service, collection) => {
         const url = createUrl(options, context)
         const args = createArgs(context)
         args.data = model
+        context.logger.debug(`url ${url}`)
 
         const response = await client.postPromise(url, args)
         return parseResponse(response, context).data
     }
 
     const search = async (query, options, context) => {
-        let url = buildUrl(config.url, {
+        let url = buildUrl(getRootUrl(context), {
             path: options.path ? `${collection}/${options.path}` : collection,
             queryParams: query
         })
+        context.logger.debug(`url ${url}`)
 
         const args = createArgs(context)
 
@@ -71,6 +86,7 @@ module.exports = (service, collection) => {
     const get = async (id, options, context) => {
         const url = createResourceUrl(id, options, context)
         const args = createArgs(context)
+        context.logger.debug(`url ${url}`)
 
         let response = await client.getPromise(url, args)
         return parseResponse(response, context).data
@@ -80,6 +96,7 @@ module.exports = (service, collection) => {
         const url = createResourceUrl(id, options, context)
         const args = createArgs(context)
         args.data = model
+        context.logger.debug(`url ${url}`)
 
         let response = await client.putPromise(url, args)
         return parseResponse(response, context).data
@@ -87,7 +104,8 @@ module.exports = (service, collection) => {
 
     const remove = async (id, options, context) => {
         const url = createResourceUrl(id, options, context)
-        const args = createArgs()
+        const args = createArgs(context)
+        context.logger.debug(`url ${url}`)
 
         let response = await client.deletePromise(url, args)
         return parseResponse(response, context).data
