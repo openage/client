@@ -9,3 +9,5 @@ exports.sendIt = require('./services/sendIt')
 exports.connect = require('./services/connect')
 exports.re = require('./services/re')
 exports.system = require('./services/system')
+exports.discovery = require('./services/discovery')
+
