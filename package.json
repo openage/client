@@ -1,6 +1,6 @@
 {
     "name": "@open-age/client",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "description": "a client to connect to open-age services",
     "main": "index.js",
     "scripts": {
@@ -23,8 +23,8 @@
     ],
     "peerDependencies": {
         "config": "^3.3.6",
-        "node-rest-client": "^3.1.0",
-        "node-rest-client-promise": "^2.0.0",
+        "node-rest-client": "^3.1.1",
+        "node-rest-client-promise": "^3.1.1",
         "validator": "^6.0.0"
     },
     "author": "Sunny Parkash <sunny.parkash@gmail.com> (https://github.com/sunnyparkash)",
