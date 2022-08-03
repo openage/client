@@ -5,19 +5,11 @@ exports.providers = crud('connect', 'providers')
 const lookups = crud('connect', 'lookups')
 
 // lookups('countries').find('in')
-exports.lookups = (area) => {
+// lookups.find({name:'countries', text: 'in'}, context)
+exports.lookups = (name, context) => {
     return {
-        find: async (code, context) => {
-            let page = await lookups.search({
-                area: area,
-                code: code
-            }, context)
-
-            if(!page.items || !page.items.length) {
-                return null
-            }
-
-            return page.items[0]
+        get: async (code, context) => {
+            return lookups.get(`${name}/${code}`, context)
         }
     }
 }
