@@ -1,10 +1,8 @@
-// const roleHelper = require('./role-helper')
 const headerHelper = require('./header-helper')
-const client = new (require('node-rest-client-promise')).Client()
 const buildUrl = require('build-url')
+const axios = require('axios')
 
 module.exports = (serviceCode, collection) => {
-    const config = require('config').get('providers')[serviceCode] || {}
     const parseResponse = (res, context) => {
         if (!res.data.isSuccess) {
             context.logger.error(res.data.message || res.data.error)
@@ -14,29 +12,40 @@ module.exports = (serviceCode, collection) => {
         return res.data
     }
 
-    const createArgs = (context) => {
-        return {
-            headers: headerHelper.build(context)
-        }
-    }
+    const getServiceUrl = (context) => {
+        let serviceUrl
 
-    const getRootUrl = (context) => {
-        let rootUrl = config.url
-        if (context.tenant && context.tenant.services && context.tenant.services.length > 0) {
-            const service = context.tenant.services.find(s => s.code === serviceCode)
+        if (context) {
+            let service
+            if (context.services && context.services.get) {
+                service = context.services.get(serviceCode)
+            }
+            if (!service && context.organization && context.organization.services && context.organization.services.length) {
+                service = context.organization.services.find(s => s.code === serviceCode)
+            }
+
+            if (!service && context.tenant && context.tenant.services && context.tenant.services.length) {
+                service = context.tenant.services.find(s => s.code === serviceCode)
+            }
+
             if (service) {
-                rootUrl = service.url
+                serviceUrl = service.url
             }
         }
-        if (!rootUrl) {
+
+        if (!serviceUrl) {
+            const config = require('config').get('providers')[serviceCode] || {}
+            serviceUrl = config.url
+        }
+
+        if (!serviceUrl) {
             throw new Error(`Could not find root URL for service: ${serviceCode}`)
         }
-        return rootUrl
     }
 
-    const createUrl = (options, context) => {
+    const getCollectionUrl = (options, context) => {
         options = options || {}
-        const rootUrl = getRootUrl(context)
+        const rootUrl = getServiceUrl(context)
         let url = buildUrl(rootUrl, {
             path: options.path ? `${collection}/${options.path}` : collection,
             queryParams: options.query
@@ -47,10 +56,10 @@ module.exports = (serviceCode, collection) => {
         return url
     }
 
-    const createResourceUrl = (id, options, context) => {
+    const getResourceUrl = (id, options, context) => {
         options = options || {}
 
-        let url = buildUrl(getRootUrl(context), {
+        let url = buildUrl(getServiceUrl(context), {
             path: `${collection}/${id}`,
             queryParams: options.query
         })
@@ -61,53 +70,71 @@ module.exports = (serviceCode, collection) => {
     }
 
     const post = async (model, options, context) => {
-        const url = createUrl(options, context)
-        const args = createArgs(context)
-        args.data = model
-        context.logger.debug(`url ${url}`)
+        const response = await axios({
+            method: "post",
+            url: getCollectionUrl(options, context),
+            data: model,
+            headers: headerHelper.build(context)
+        })
+        return parseResponse(response, context).data
+    }
 
-        const response = await client.postPromise(url, args)
+    const upload = async (file, options, context) => {
+        const headers = headerHelper.build(context)
+        headers['Content-Type'] = 'multipart/form-data'
+
+        const FormData = require('form-data')
+        const fs = require('fs')
+        const form = new FormData()
+        form.append('file', fs.createReadStream(file.path))
+
+        const response = await axios({
+            method: "post",
+            url: getCollectionUrl(options, context),
+            data: form,
+            headers: headers
+        })
         return parseResponse(response, context).data
     }
 
     const search = async (query, options, context) => {
-        let url = buildUrl(getRootUrl(context), {
-            path: options.path ? `${collection}/${options.path}` : collection,
-            queryParams: query
+
+        options = options || {}
+        options.query = query || options.query
+
+        let response = await axios({
+            method: 'get',
+            url: getCollectionUrl(options, context),
+            headers: headerHelper.build(context)
         })
-        context.logger.debug(`url ${url}`)
-
-        const args = createArgs(context)
-
-        let response = await client.getPromise(url, args)
         return parseResponse(response, context).items
     }
 
     const get = async (id, options, context) => {
-        const url = createResourceUrl(id, options, context)
-        const args = createArgs(context)
-        context.logger.debug(`url ${url}`)
-
-        let response = await client.getPromise(url, args)
+        let response = await axios({
+            method: 'get',
+            url: getResourceUrl(id, options, context),
+            headers: headerHelper.build(context)
+        })
         return parseResponse(response, context).data
     }
 
     const put = async (id, model, options, context) => {
-        const url = createResourceUrl(id, options, context)
-        const args = createArgs(context)
-        args.data = model
-        context.logger.debug(`url ${url}`)
-
-        let response = await client.putPromise(url, args)
+        let response = await axios({
+            method: 'put',
+            url: getResourceUrl(id, options, context),
+            data: model,
+            headers: headerHelper.build(context)
+        })
         return parseResponse(response, context).data
     }
 
     const remove = async (id, options, context) => {
-        const url = createResourceUrl(id, options, context)
-        const args = createArgs(context)
-        context.logger.debug(`url ${url}`)
-
-        let response = await client.deletePromise(url, args)
+        let response = await axios({
+            method: 'delete',
+            url: getResourceUrl(id, options, context),
+            headers: headerHelper.build(context)
+        })
         return parseResponse(response, context).data
     }
 
@@ -129,6 +156,9 @@ module.exports = (serviceCode, collection) => {
         },
         post: async (model, options, context) => {
             return post(model, options, context)
+        },
+        upload: async (file, options, context) => {
+            return upload(file, options, context)
         }
     }
 }
