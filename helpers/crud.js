@@ -13,10 +13,9 @@ module.exports = (serviceCode, collection) => {
     }
 
     const getServiceUrl = (context) => {
-        let serviceUrl
+        let service
 
         if (context) {
-            let service
             if (context.services && context.services.get) {
                 service = context.services.get(serviceCode)
             }
@@ -27,20 +26,17 @@ module.exports = (serviceCode, collection) => {
             if (!service && context.tenant && context.tenant.services && context.tenant.services.length) {
                 service = context.tenant.services.find(s => s.code === serviceCode)
             }
-
-            if (service) {
-                serviceUrl = service.url
-            }
         }
 
-        if (!serviceUrl) {
-            const config = require('config').get('providers')[serviceCode] || {}
-            serviceUrl = config.url
+        if (!service) {
+            service = require('config').get('providers')[serviceCode]
         }
 
-        if (!serviceUrl) {
+        if (!service) {
             throw new Error(`Could not find root URL for service: ${serviceCode}`)
         }
+
+        return service.url
     }
 
     const getCollectionUrl = (options, context) => {
@@ -80,13 +76,14 @@ module.exports = (serviceCode, collection) => {
     }
 
     const upload = async (file, options, context) => {
-        const headers = headerHelper.build(context)
+        let headers = headerHelper.build(context)
         headers['Content-Type'] = 'multipart/form-data'
 
         const FormData = require('form-data')
         const fs = require('fs')
         const form = new FormData()
         form.append('file', fs.createReadStream(file.path))
+        headers = { ...headers, ...form.getHeaders() }
 
         const response = await axios({
             method: "post",
