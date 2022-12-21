@@ -142,8 +142,18 @@ module.exports = (serviceCode, collection) => {
         search: async (query, context) => {
             return search(query, {}, context)
         },
-        get: async (id, context) => {
-            return get(id, {}, context)
+        get: async (id, param1, param2) => {
+            let options = {}
+            let context = {}
+
+            if (param2) {
+                options = param1
+                context = param2
+            } else {
+                context = param1
+            }
+
+            return get(id, options, context)
         },
         update: async (id, model, context) => {
             return put(id, model, {}, context)
