@@ -33,15 +33,20 @@ module.exports = (serviceCode, collection) => {
         }
 
         if (!service) {
-            throw new Error(`Could not find root URL for service: ${serviceCode}`)
+            context.logger.error(`Could not find root URL for service: ${serviceCode}`)
+            return
         }
 
         return service.url
     }
 
     const getCollectionUrl = (options, context) => {
-        options = options || {}
         const rootUrl = getServiceUrl(context)
+        if (!rootUrl) {
+            return
+        }
+        options = options || {}
+
         let url = buildUrl(rootUrl, {
             path: options.path ? `${collection}/${options.path}` : collection,
             queryParams: options.query
@@ -53,9 +58,14 @@ module.exports = (serviceCode, collection) => {
     }
 
     const getResourceUrl = (id, options, context) => {
+
+        const rootUrl = getServiceUrl(context)
+        if (!rootUrl) {
+            return
+        }
         options = options || {}
 
-        let url = buildUrl(getServiceUrl(context), {
+        let url = buildUrl(rootUrl, {
             path: `${collection}/${id}`,
             queryParams: options.query
         })
@@ -66,9 +76,15 @@ module.exports = (serviceCode, collection) => {
     }
 
     const post = async (model, options, context) => {
+        let url = getCollectionUrl(options, context)
+
+        if (!url) {
+            return {}
+        }
+
         const response = await axios({
             method: "post",
-            url: getCollectionUrl(options, context),
+            url: url,
             data: model,
             headers: headerHelper.build(context)
         })
@@ -76,6 +92,13 @@ module.exports = (serviceCode, collection) => {
     }
 
     const upload = async (file, options, context) => {
+
+        let url = getCollectionUrl(options, context)
+
+        if (!url) {
+            return {}
+        }
+
         let headers = headerHelper.build(context)
         headers['Content-Type'] = 'multipart/form-data'
 
@@ -87,7 +110,7 @@ module.exports = (serviceCode, collection) => {
 
         const response = await axios({
             method: "post",
-            url: getCollectionUrl(options, context),
+            url: url,
             data: form,
             headers: headers
         })
@@ -95,31 +118,47 @@ module.exports = (serviceCode, collection) => {
     }
 
     const search = async (query, options, context) => {
+        let url = getCollectionUrl(options, context)
+
+        if (!url) {
+            return {}
+        }
 
         options = options || {}
         options.query = query || options.query
 
         let response = await axios({
             method: 'get',
-            url: getCollectionUrl(options, context),
+            url: url,
             headers: headerHelper.build(context)
         })
         return parseResponse(response, context).items
     }
 
     const get = async (id, options, context) => {
+        let url = getResourceUrl(id, options, context)
+
+        if (!url) {
+            return {}
+        }
+
         let response = await axios({
             method: 'get',
-            url: getResourceUrl(id, options, context),
+            url: url,
             headers: headerHelper.build(context)
         })
         return parseResponse(response, context).data
     }
 
     const put = async (id, model, options, context) => {
+        let url = getResourceUrl(id, options, context)
+
+        if (!url) {
+            return {}
+        }
         let response = await axios({
             method: 'put',
-            url: getResourceUrl(id, options, context),
+            url: url,
             data: model,
             headers: headerHelper.build(context)
         })
@@ -127,9 +166,15 @@ module.exports = (serviceCode, collection) => {
     }
 
     const remove = async (id, options, context) => {
+        let url = getResourceUrl(id, options, context)
+
+        if (!url) {
+            return {}
+        }
+
         let response = await axios({
             method: 'delete',
-            url: getResourceUrl(id, options, context),
+            url: url,
             headers: headerHelper.build(context)
         })
         return parseResponse(response, context).data
